@@ -1,0 +1,15 @@
+# 1 "example.cpp"
+# 1 "<built-in>"
+# 1 "<command-line>"
+# 1 "example.cpp"
+
+
+int main (int argc, char* argv[]){
+    long int a;
+    long int b;
+    long int result;
+    a = 5;
+    b=200;
+    result = a*b;
+
+}
