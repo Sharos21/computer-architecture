@@ -99,6 +99,7 @@ logic [63:0] temp;
 
 //result 
 always_comb begin
+	temp = opa*opb;
 	case (func)
 		//R-TYPE
 		`ALU_ADD: 	result = opa + opb;
@@ -111,12 +112,10 @@ always_comb begin
 		`ALU_SRA: 	result = $signed(opa) >>> opb[4:0]; 
 		`ALU_SLT: 	result = {31'd0, ($signed(opa)< $signed(opb))};
 		`ALU_SLTU:	result = {31'd0, (opa < opb)};
-		`ALU_MUL:   temp   = opa * opb;
-					result = [31:0]temp;
-				end
-		`ALU_MULH:  temp   = opa *opb;
-					result = [63:32]temp;
-				end
+		`ALU_MUL: 	result = temp[31:0];
+				
+		`ALU_MULH:	result = temp[63:32];
+				
 		default: 	result = 32'hbaadbeef;  
 	endcase	
 end

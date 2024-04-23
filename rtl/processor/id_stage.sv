@@ -18,7 +18,7 @@ output logic 		illegal,    // non-zero on an illegal instruction
 output logic 		valid_inst  // for counting valid instructions executed
 );
 
-assign valid_inst =valid_inst_in & ~illegal;
+assign valid_inst = valid_inst_in & ~illegal;
 
 always_comb begin
 	// - invalid instructions should clear valid_inst.
@@ -52,8 +52,8 @@ always_comb begin
 				`SLT_INST  : alu_func = `ALU_SLT;   
 				`SLTU_INST : alu_func = `ALU_SLTU;
 				// My code below
-				`MUL_INST  : alu_func = "MUL_INST;
-				`MULH	   : alu_func = "MULH;
+				`MUL_INST  : alu_func = `ALU_MUL;
+				`MULH	   : alu_func = `ALU_MULH;
 				default: illegal = `TRUE;
 			endcase 
 		end //R-TYPE
@@ -162,11 +162,14 @@ input logic 		clk,              		// system clk
 input logic 		rst,              		// system rst
 input logic [31:0] 	if_id_IR,            	// incoming instruction
 input logic [31:0]	if_id_PC,
-input logic	        mem_wb_valid_inst,   	 	//Does the instruction write to rd?
+input logic	        mem_wb_valid_inst,	 	//Does the instruction write to rd?
 input logic	        mem_wb_reg_wr,   	 	//Does the instruction write to rd?
 input logic [4:0]	mem_wb_dest_reg_idx, 	//index of rd
 input logic [31:0] 	wb_reg_wr_data_out, 	// Reg write data from WB Stage
 input logic         if_id_valid_inst,
+input logic[4:0]    id_ex_dest_idx,
+input logic[4:0] 	ex_mem_dest_idx,
+
 
 output logic [31:0] id_ra_value_out,    	// reg A value
 output logic [31:0] id_rb_value_out,    	// reg B value
@@ -185,11 +188,13 @@ output logic 	    id_wr_mem_out,          // does inst write memory?
 output logic 		cond_branch,
 output logic        uncond_branch,
 output logic       	id_illegal_out,
-output logic       	id_valid_inst_out	  	// is inst a valid instruction to be counted for CPI calculations?
+output logic       	id_valid_inst_out,	  	// is inst a valid instruction to be counted for CPI calculations?
+output logic stall
 );
    
 logic dest_reg_select;
 logic [31:0] rb_val;
+  
 
 //instruction fields read from IF/ID pipeline register
 logic[4:0] ra_idx; 
@@ -201,8 +206,19 @@ assign rb_idx=if_id_IR[24:20];	// inst operand B register index
 assign rc_idx=if_id_IR[11:7];  // inst operand C register index
 // Instantiate the register file used by this pipeline
 
+
 logic write_en;
 assign write_en=mem_wb_valid_inst & mem_wb_reg_wr;
+
+
+
+always_comb begin
+	if((ra_idx!=0 && (id_ex_dest_idx == ra_idx | ex_mem_dest_idx  == ra_idx | mem_wb_dest_reg_idx == ra_idx))
+ 		|(rb_idx!=0 && (id_ex_dest_idx == rb_idx | ex_mem_dest_idx == rb_idx | mem_wb_dest_reg_idx == rb_idx )))
+		 stall = 1;
+	else
+		stall = 0;
+end
 
 regfile regf_0(.clk		(clk),
 			   .rst		(rst),
@@ -287,4 +303,5 @@ assign pc_add_opa =(if_id_IR[6:0] == `I_JAL_TYPE)? id_ra_value_out:if_id_PC;
 
 assign id_funct3_out = if_id_IR[14:12];
 
-endmodule // module id_stage
+
+endmodule // module id_stage  

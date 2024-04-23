@@ -71,6 +71,7 @@ logic         	id_valid_inst_out;
 logic 			id_uncond_branch;
 logic 			id_cond_branch;
 logic [31:0]    id_pc_add_opa;
+logic stall;
 
 // Outputs from ID/EX Pipeline Register
 logic 			id_ex_reg_wr;
@@ -147,6 +148,7 @@ if_stage if_stage_0 (
 .ex_take_branch_out	(ex_mem_take_branch),
 .ex_target_PC_out	(ex_mem_target_PC),
 .Imem2proc_data		(instruction),
+.stall(stall),
 
 
 // Outputs
@@ -162,10 +164,21 @@ if_stage if_stage_0 (
 //            IF/ID Pipeline Register           //
 //                                              //
 //////////////////////////////////////////////////
-assign if_id_enable = 1;
+//always_comb begin
+// 	if(stall & (~mem_wb_valid_inst)) 
+// 	//if(stall)
+// 		if_id_enable = 0;
+// 	else 
+// 		if_id_enable = 1; 
+// end
+
+//assign if_id_enable = (stall & ~mem_wb_valid_inst)? 0:1;
+assign if_id_enable = (stall)? 0:1;
+ 
+//assign if_id_enable = 1; 
 
 always_ff @(posedge clk or posedge rst) begin
-	if(rst) begin
+	if(rst | ex_mem_take_branch ) begin
 		if_id_PC         <=  0;
 		if_id_IR         <=  `NOOP_INST;
 		if_id_NPC        <=  0;
@@ -177,6 +190,7 @@ always_ff @(posedge clk or posedge rst) begin
 		if_id_IR         <=  if_IR_out;
         if_id_valid_inst <= if_valid_inst_out;
     end 
+	
 end 
 
    
@@ -196,6 +210,9 @@ id_stage id_stage_0 (
 .mem_wb_reg_wr			(mem_wb_reg_wr), 
 .wb_reg_wr_data_out     (wb_reg_wr_data_out),  	
 .if_id_valid_inst       (if_id_valid_inst),
+.ex_mem_dest_idx        (ex_mem_dest_reg_idx),
+.id_ex_dest_idx        (id_ex_dest_reg_idx),
+
 
 // Outputs
 .id_reg_wr_out          (id_reg_wr_out),
@@ -213,7 +230,8 @@ id_stage id_stage_0 (
 .cond_branch			(id_cond_branch),
 .uncond_branch			(id_uncond_branch),
 .id_illegal_out			(id_illegal_out),
-.id_valid_inst_out		(id_valid_inst_out)
+.id_valid_inst_out		(id_valid_inst_out),
+.stall                  (stall)
 );
 
 //////////////////////////////////////////////////
@@ -221,10 +239,17 @@ id_stage id_stage_0 (
 //            ID/EX Pipeline Register           //
 //                                              //
 //////////////////////////////////////////////////
-assign id_ex_enable =1; // disabled when HzDU initiates a stall
+always_comb begin
+	if(stall ) 
+	//if(stall)
+		id_ex_enable = 0;
+	else 
+		id_ex_enable = 1;
+end  
+										// disabled when HzDU initiates a stall
 // synopsys sync_set_rst "rst"
 always_ff @(posedge clk or posedge rst) begin
-	if (rst) begin //sys_rst
+	if (rst | ex_mem_take_branch | stall) begin //sys_rst
 		//Control
 		id_ex_funct3		<=  0;
 		id_ex_opa_select    <=  `ALU_OPA_IS_REGA;
@@ -272,7 +297,9 @@ always_ff @(posedge clk or posedge rst) begin
 			id_ex_pc_add_opa	<=  id_pc_add_opa;
 			id_ex_uncond_branch <=  id_uncond_branch;
 			id_ex_cond_branch	<=  id_cond_branch;
-		end // if
+		 end //if
+	//	 else if(ex_mem_take_branch)
+	//		id_ex_IR <=  `NOOP_INST;	
     end // else: !if(rst)
 end // always
 
@@ -311,7 +338,7 @@ ex_stage ex_stage_0 (
 assign ex_mem_enable = 1; // always enabled
 // synopsys sync_set_rst "rst"
 always_ff @(posedge clk or posedge rst) begin
-	if (rst) begin
+	if (rst | ex_mem_take_branch) begin
 		//Control
 		ex_mem_funct3		<=  0;
 		ex_mem_rd_mem       <=  0;
@@ -345,6 +372,8 @@ always_ff @(posedge clk or posedge rst) begin
 			ex_mem_target_PC	<=  ex_target_PC_out;			
 			ex_mem_NPC			<=  id_ex_NPC;
 		end // if
+	//	else if(ex_mem_take_branch)
+	//		ex_mem_IR         <=  `NOOP_INST;
 	end // else: !if(rst)
 end // always
 
@@ -382,7 +411,7 @@ mem_stage mem_stage_0 (
 assign mem_wb_enable = 1; // always enabled
 // synopsys sync_set_rst "rst"
 always_ff @(posedge clk or posedge rst) begin
-	if (rst) begin
+	if (rst) begin   //if (rst | ex_mem_take_branch) begin
 		//Control 
 		mem_wb_funct3		<=  0;
 		mem_wb_illegal      <=  0;
@@ -398,7 +427,7 @@ always_ff @(posedge clk or posedge rst) begin
 		//Debug
 		mem_wb_NPC			<=  0;
 	end else begin
-		if (mem_wb_enable) begin
+		if (mem_wb_enable) begin     //if (mem_wb_enable | ex_mem_take_branch) begin
 			mem_wb_funct3		<=  ex_mem_funct3;
 			mem_wb_rd_mem    	<=  ex_mem_rd_mem;
 			mem_wb_illegal      <=  ex_mem_illegal;
@@ -412,6 +441,8 @@ always_ff @(posedge clk or posedge rst) begin
 			
 			mem_wb_NPC			<=  ex_mem_NPC;
 		end // if
+	//	else if(ex_mem_take_branch)
+	//		mem_wb_IR         <=  `NOOP_INST;
 	end // else: !if(rst)
 end // always
 

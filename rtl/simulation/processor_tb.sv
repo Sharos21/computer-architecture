@@ -122,24 +122,8 @@ initial begin
     rst=1;
     @(posedge clk);
     rst=0;
-    instruction[31:20] = 10; //imm
-    instruction[19:15] = 1; //rs1
-    instruction[14:12] = 0; //func3
-    instruction[11:7] = 2; //rd
-    instruction[6:0] = 7'b0110011;
-    @(posedge clk);
-    instruction[31:20] = 15; //imm
-    instruction[19:15] = 1; //rs1
-    instruction[14:12] = 0; //func3
-    instruction[11:7] = 3; //rd
-    @(posedge clk);
-    instruction[31:25] = 2'h01; //func7
-    instruction[24:20] = 2; //rs2
-    instruction[19:15] = 3; //rs1
-    instruction[14:12] = 0;//func3
-    instruction[11:7] = 3; //rd
-    instruction[6:0] = 6'b0110011
-
+    for(int i=0;i<50000;i++) begin
+        @(posedge clk);    
     end
     $stop;
 end
