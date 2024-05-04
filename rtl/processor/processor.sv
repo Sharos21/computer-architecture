@@ -231,7 +231,9 @@ id_stage id_stage_0 (
 .uncond_branch			(id_uncond_branch),
 .id_illegal_out			(id_illegal_out),
 .id_valid_inst_out		(id_valid_inst_out),
-.stall                  (stall)
+.stall                  (stall),
+.forward_a				(forward_a),
+.forward_b				(forward_b)
 );
 
 //////////////////////////////////////////////////
@@ -288,8 +290,16 @@ always_ff @(posedge clk or posedge rst) begin
 			
 			id_ex_PC            <=  if_id_PC;
 			id_ex_IR            <=  if_id_IR;
-			id_ex_rega          <=  id_rega_out;
-			id_ex_regb          <=  id_regb_out;
+			if(forward_a) begin 
+				id_ex_rega          <=  ex_alu_result_out;
+				id_ex_regb          <=  id_regb_out;
+			end else if (forward_b) begin
+				id_ex_rega          <=  id_rega_out;
+				id_ex_regb          <=  ex_alu_result_out;
+			end else begin
+				id_ex_rega <= id_rega_out;
+				id_ex_regb <= id_regb_out;
+			end
 			id_ex_imm			<=  id_immediate_out;
 			id_ex_dest_reg_idx  <=  id_dest_reg_idx_out;
 			

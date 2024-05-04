@@ -10,7 +10,7 @@ cModel Technology
 Z0 dC:/Users/user/Desktop/arxitektoniki upologiston/computer-architecture/rtl/simulation
 valu
 Z1 DXx6 sv_std 3 std 0 22 AD7iAPLo6nTIKk<N0eo=D3
-Z2 !s110 1713890181
+Z2 !s110 1714825522
 !i10b 1
 !s100 ZCAken=ghoefBlFcEKa4P1
 I^YRNfNXXFCVA6SGXg39S61
@@ -26,7 +26,7 @@ Z8 OV;L;10.5b;63
 r1
 !s85 0
 31
-Z9 !s108 1713890181.000000
+Z9 !s108 1714825522.000000
 Z10 !s107 processor_tb.sv|memory.sv|../processor/processor.sv|../processor/wb_stage.sv|../processor/mem_stage.sv|../processor/ex_stage.sv|../processor/id_stage.sv|../processor/regfile.sv|../processor/if_stage.sv|../sys_defs.vh|
 Z11 !s90 -reportprogress|300|-f|files_rtl.f|
 !i113 1
@@ -58,13 +58,13 @@ vid_stage
 R1
 R2
 !i10b 1
-!s100 1L^?dbm8RWK>BakzN_0EK1
-IQ>B_H?9Xc0gEQA;8?kORn2
+!s100 g]N<UjPz89FAU?hKJUo?_3
+Ia`bDjHgDJ[`Hz4:DLAB>12
 R3
 Z13 !s105 id_stage_sv_unit
 S1
 R0
-Z14 w1713861234
+Z14 w1714825190
 Z15 8../processor/id_stage.sv
 Z16 F../processor/id_stage.sv
 L0 160
@@ -173,13 +173,13 @@ vprocessor
 R1
 R2
 !i10b 1
-!s100 7QCV>5NkObR:fdceD9@AI1
-I<VnomImBY09KFGC_m72QV0
+!s100 ^:@T@6=e?0kKFjEJ73E3G2
+IDC_c@K3mij?EP^5TLA8NK1
 R3
 !s105 processor_sv_unit
 S1
 R0
-w1713861839
+w1714825512
 8../processor/processor.sv
 F../processor/processor.sv
 L0 5

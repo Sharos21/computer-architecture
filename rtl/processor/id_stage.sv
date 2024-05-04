@@ -189,7 +189,9 @@ output logic 		cond_branch,
 output logic        uncond_branch,
 output logic       	id_illegal_out,
 output logic       	id_valid_inst_out,	  	// is inst a valid instruction to be counted for CPI calculations?
-output logic stall
+output logic stall,
+output logic forward_a,
+output logic forward_b
 );
    
 logic dest_reg_select;
@@ -207,17 +209,55 @@ assign rc_idx=if_id_IR[11:7];  // inst operand C register index
 // Instantiate the register file used by this pipeline
 
 
+
+
+
 logic write_en;
 assign write_en=mem_wb_valid_inst & mem_wb_reg_wr;
 
+//Forward Unit
+always_comb begin
+	if(ex_mem_dest_idx !=0 && ex_mem_dest_idx == ra_idx) begin
+		forward_a = 1;
+		forward_b = 0;
+	end else if(ex_mem_dest_idx != 0 && ex_mem_dest_idx ==rb_idx) begin
+		forward_a = 0;
+		forward_b = 1;
+	end else begin
+		forward_a= 0;
+		forward_b =0;
+	end
+end
 
+//always_comb begin
+//	if((ra_idx!=0 && (id_ex_dest_idx == ra_idx | ex_mem_dest_idx  == ra_idx | mem_wb_dest_reg_idx == ra_idx))
+// 		|(rb_idx!=0 && (id_ex_dest_idx == rb_idx | ex_mem_dest_idx == rb_idx | mem_wb_dest_reg_idx == rb_idx )))
+//		 stall = 1;
+//	else
+//		stall = 0;
+//end
 
 always_comb begin
-	if((ra_idx!=0 && (id_ex_dest_idx == ra_idx | ex_mem_dest_idx  == ra_idx | mem_wb_dest_reg_idx == ra_idx))
- 		|(rb_idx!=0 && (id_ex_dest_idx == rb_idx | ex_mem_dest_idx == rb_idx | mem_wb_dest_reg_idx == rb_idx )))
-		 stall = 1;
-	else
-		stall = 0;
+	if (
+		if_id_IR[6:0] ==7'b0010011 | //I arith
+		if_id_IR[6:0] ==7'b0000011 | //I ld
+		if_id_IR[6:0] == 7'b1100111 | // I jal
+		if_id_IR[6:0] == 7'b0110111 | // U_LD_TYPE
+		if_id_IR[6:0] == 7'b0010111 | // U_AUIPC_TYPE
+		if_id_IR[6:0] == 7'b1110011 |// i break
+		if_id_IR[6:0] == 7'b1101111 // J_TYPE
+	) begin
+		if(ra_idx!=0 && ( mem_wb_dest_reg_idx == ra_idx))
+			stall = 1;
+		else
+			stall = 0;
+	end else begin
+		if((ra_idx!=0 && ( mem_wb_dest_reg_idx == ra_idx))
+			|(rb_idx!=0 && (mem_wb_dest_reg_idx == rb_idx )))
+				stall = 1;
+		else
+			stall = 0;
+	end
 end
 
 regfile regf_0(.clk		(clk),
