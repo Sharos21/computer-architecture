@@ -5,9 +5,8 @@
 
 
 fact:
-    addi a5, zero, 2
-    addi a4, zero, 3
-    addi  a3, a4, 10
+   li a5 , 2
+   addi a2, a5 , 2
 jr ra
 
 

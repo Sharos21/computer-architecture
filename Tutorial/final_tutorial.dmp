@@ -23,6 +23,5 @@ Disassembly of section .text:
 
 0000002c <fact>:
   2c:	00200793          	li	a5,2
-  30:	00300713          	li	a4,3
-  34:	00a70693          	addi	a3,a4,10
-  38:	00008067          	ret
+  30:	00278613          	addi	a2,a5,2
+  34:	00008067          	ret
