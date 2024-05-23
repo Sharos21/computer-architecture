@@ -169,6 +169,10 @@ input logic [31:0] 	wb_reg_wr_data_out, 	// Reg write data from WB Stage
 input logic         if_id_valid_inst,
 input logic[4:0]    id_ex_dest_idx,
 input logic[4:0] 	ex_mem_dest_idx,
+input logic[31:0]	ex_mem_alu_result,
+input logic[31:0]	id_ex_IR,
+input logic[31:0]	ex_mem_IR,
+input logic[31:0]	mem_wb_IR,
 
 
 output logic [31:0] id_ra_value_out,    	// reg A value
@@ -189,7 +193,9 @@ output logic 		cond_branch,
 output logic        uncond_branch,
 output logic       	id_illegal_out,
 output logic       	id_valid_inst_out,	  	// is inst a valid instruction to be counted for CPI calculations?
-output logic stall
+output logic stall,
+output logic [1:0] 	forwardA,
+output logic [1:0]	forwardB
 );
    
 logic dest_reg_select;
@@ -213,7 +219,30 @@ assign rc_idx=if_id_IR[11:7];  // inst operand C register index
 logic write_en;
 assign write_en=mem_wb_valid_inst & mem_wb_reg_wr;
 
+//Forward Unit
+always_comb begin
 
+	if ( mem_wb_dest_reg_idx !=0 && mem_wb_dest_reg_idx == ra_idx )		
+		forwardA = 2'b11; 												// 3 forward value of mem_wb stage to ra 
+	else if(ex_mem_dest_idx !=0 && ex_mem_dest_idx == ra_idx )
+		forwardA = 2'b10;												// 2  forward value of ex_mem stage to ra 
+	else if (id_ex_dest_idx !=0 && id_ex_dest_idx ==ra_idx )
+		forwardA = 2'b01; 												//1 forward value of id_ex after alu stage to ra
+	else 
+		forwardA =  2'b00;										
+									
+	
+	if (`U_LD_TYPE| `U_AUIPC_TYPE| `J_TYPE)
+		forwardB = 2'b00;
+	if ( mem_wb_dest_reg_idx !=0 && mem_wb_dest_reg_idx == rb_idx )		
+		forwardB = 2'b11;											// 3 forward value of mem_wb stage to rb
+	else if(ex_mem_dest_idx !=0 && ex_mem_dest_idx == rb_idx )
+		forwardB = 2'b10;											// 2  forward value of ex_mem stage to rb
+	else if (id_ex_dest_idx !=0 && id_ex_dest_idx ==rb_idx )
+		forwardB = 2'b01; 											//1 forward value of id_ex after alu stage to rb
+									
+																												
+end
 
 //always_comb begin
 //	if((ra_idx!=0 && (id_ex_dest_idx == ra_idx | ex_mem_dest_idx  == ra_idx | mem_wb_dest_reg_idx == ra_idx))
@@ -223,28 +252,66 @@ assign write_en=mem_wb_valid_inst & mem_wb_reg_wr;
 //		stall = 0;
 //end
 
+//always_comb begin
+//	if (
+//		//if_id_IR[6:0] ==7'b0010011 | //I arith
+//		//if_id_IR[6:0] ==7'b0000011  |  //I ld
+//		//if_id_IR[6:0] == 7'b1100111 | // I jal
+//		//if_id_IR[6:0] == 7'b0110111 | // U_LD_TYPE
+//		//if_id_IR[6:0] == 7'b0010111 | // U_AUIPC_TYPE
+//		//if_id_IR[6:0] == 7'b1110011 |// i break
+//		//if_id_IR[6:0] == 7'b1101111 // J_TYPE
+//	) begin
+//		if(ra_idx!=0 && (id_ex_dest_idx == ra_idx | ex_mem_dest_idx  == ra_idx | mem_wb_dest_reg_idx == ra_idx))
+//			stall = 1;
+//		else
+//			stall = 0;
+//	end else begin
+//		if((ra_idx!=0 && (id_ex_dest_idx == ra_idx | ex_mem_dest_idx  == ra_idx | mem_wb_dest_reg_idx == ra_idx))
+//			|(rb_idx!=0 && (id_ex_dest_idx == rb_idx | ex_mem_dest_idx == rb_idx | mem_wb_dest_reg_idx == rb_idx )))
+//				stall = 1;
+//		else
+//			stall = 0;
+//	end
+//end
+
+//always_comb begin
+//	if(id_ex_IR[6:0] ==7'b0000011 | ex_mem_IR[6:0] ==7'b0000011 |mem_wb_IR[6:0] ==7'b0000011 ) begin
+//		if((ra_idx!=0 && (id_ex_dest_idx == ra_idx | ex_mem_dest_idx  == ra_idx | mem_wb_dest_reg_idx == ra_idx))
+//			|(rb_idx!=0 && (id_ex_dest_idx == rb_idx | ex_mem_dest_idx == rb_idx | mem_wb_dest_reg_idx == rb_idx )))
+//				stall = 1;
+//		else
+//			stall = 0;
+//	end else
+//		stall = 0;
+//end
+
+
+
+
 always_comb begin
-	if (
-		if_id_IR[6:0] ==7'b0010011 | //I arith
-		if_id_IR[6:0] ==7'b0000011 | //I ld
-		if_id_IR[6:0] == 7'b1100111 | // I jal
-		if_id_IR[6:0] == 7'b0110111 | // U_LD_TYPE
-		if_id_IR[6:0] == 7'b0010111 | // U_AUIPC_TYPE
-		if_id_IR[6:0] == 7'b1110011 |// i break
-		if_id_IR[6:0] == 7'b1101111 // J_TYPE
-	) begin
-		if(ra_idx!=0 && (id_ex_dest_idx == ra_idx | ex_mem_dest_idx  == ra_idx | mem_wb_dest_reg_idx == ra_idx))
-			stall = 1;
-		else
-			stall = 0;
-	end else begin
-		if((ra_idx!=0 && (id_ex_dest_idx == ra_idx | ex_mem_dest_idx  == ra_idx | mem_wb_dest_reg_idx == ra_idx))
-			|(rb_idx!=0 && (id_ex_dest_idx == rb_idx | ex_mem_dest_idx == rb_idx | mem_wb_dest_reg_idx == rb_idx )))
+	if(id_ex_IR[6:0] ==7'b0000011 ) begin
+		if((ra_idx!=0 && (id_ex_dest_idx == ra_idx)) | (rb_idx!=0 && (id_ex_dest_idx == rb_idx)))
 				stall = 1;
 		else
 			stall = 0;
 	end
+	else if (ex_mem_IR[6:0] ==7'b0000011 ) begin
+		if((ra_idx!=0 &&  (ex_mem_dest_idx  == ra_idx)) | (rb_idx!=0 && (ex_mem_dest_idx ==rb_idx)))
+			stall = 1;
+		else 
+			stall = 0;
+	end
+	else if (mem_wb_IR[6:0] ==7'b0000011) begin
+		if((ra_idx!=0 && (mem_wb_dest_reg_idx == ra_idx)) | (rb_idx!=0 && (mem_wb_dest_reg_idx == rb_idx)))
+			stall = 1;
+		else 
+			stall = 0;
+	 end
+	else 
+		stall = 0;
 end
+
 
 regfile regf_0(.clk		(clk),
 			   .rst		(rst),
@@ -331,3 +398,6 @@ assign id_funct3_out = if_id_IR[14:12];
 
 
 endmodule // module id_stage  
+
+
+//Patates

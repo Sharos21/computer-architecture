@@ -72,6 +72,8 @@ logic 			id_uncond_branch;
 logic 			id_cond_branch;
 logic [31:0]    id_pc_add_opa;
 logic stall;
+logic [1:0] forwardA;
+logic [1:0]	forwardB;
 
 // Outputs from ID/EX Pipeline Register
 logic 			id_ex_reg_wr;
@@ -212,6 +214,10 @@ id_stage id_stage_0 (
 .if_id_valid_inst       (if_id_valid_inst),
 .ex_mem_dest_idx        (ex_mem_dest_reg_idx),
 .id_ex_dest_idx        (id_ex_dest_reg_idx),
+.ex_mem_alu_result		(ex_mem_alu_result),
+.id_ex_IR				(id_ex_IR),
+.ex_mem_IR				(ex_mem_IR),
+.mem_wb_IR				(mem_wb_IR),
 
 
 // Outputs
@@ -231,7 +237,9 @@ id_stage id_stage_0 (
 .uncond_branch			(id_uncond_branch),
 .id_illegal_out			(id_illegal_out),
 .id_valid_inst_out		(id_valid_inst_out),
-.stall                  (stall)
+.stall                  (stall),
+.forwardA				(forwardA),
+.forwardB				(forwardB)
 );
 
 //////////////////////////////////////////////////
@@ -276,6 +284,7 @@ always_ff @(posedge clk or posedge rst) begin
 		id_ex_NPC           <=  0;
     end else begin 
 		if (id_ex_enable) begin
+			
 			id_ex_funct3		<=  id_funct3_out;
 			id_ex_opa_select    <=  id_opa_select_out;
 			id_ex_opb_select    <=  id_opb_select_out;
@@ -286,10 +295,41 @@ always_ff @(posedge clk or posedge rst) begin
 			id_ex_valid_inst    <=  id_valid_inst_out;
             id_ex_reg_wr        <=  id_reg_wr_out;
 			
+			case(forwardB)
+				2'b01:begin //1
+					id_ex_regb          <=  ex_alu_result_out;
+				end
+				2'b10: begin //2
+					id_ex_regb          <=  ex_mem_alu_result;
+				end
+				2'b11: begin	//3
+					id_ex_regb          <=  mem_wb_alu_result;
+				end
+				2'b00: begin
+					id_ex_regb  	<=	id_regb_out;
+				end
+			endcase
+			case (forwardA)
+				2'b01: begin //1
+					id_ex_rega          <=  ex_alu_result_out;
+					
+				end
+				2'b10:begin //2
+					id_ex_rega          <=  ex_mem_alu_result;
+					
+				end
+				2'b11: begin //3
+					id_ex_rega          <=  mem_wb_alu_result;
+					
+				end
+				2'b00: begin
+					id_ex_rega          <=  id_rega_out;
+					
+				end
+			endcase
+
 			id_ex_PC            <=  if_id_PC;
 			id_ex_IR            <=  if_id_IR;
-			id_ex_rega          <=  id_rega_out;
-			id_ex_regb          <=  id_regb_out;
 			id_ex_imm			<=  id_immediate_out;
 			id_ex_dest_reg_idx  <=  id_dest_reg_idx_out;
 			
@@ -297,9 +337,7 @@ always_ff @(posedge clk or posedge rst) begin
 			id_ex_pc_add_opa	<=  id_pc_add_opa;
 			id_ex_uncond_branch <=  id_uncond_branch;
 			id_ex_cond_branch	<=  id_cond_branch;
-		 end //if
-	//	 else if(ex_mem_take_branch)
-	//		id_ex_IR <=  `NOOP_INST;	
+		end // if
     end // else: !if(rst)
 end // always
 
